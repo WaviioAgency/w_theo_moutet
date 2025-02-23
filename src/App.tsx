@@ -7,6 +7,7 @@ import { ClientDashboard } from './components/ClientDashboard';
 import { ProfilePage } from './components/ProfilePage';
 import { ThemeToggle } from './components/ThemeToggle';
 import logo from './lib/theo_moutet_logotypes.png';
+import aboutImage from './lib/theo_m.png';
 
 function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -15,6 +16,25 @@ function App() {
   const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'profile'>('home');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
+
+  const testimonials = [
+    {
+      name: "Marie L.",
+      text: "Grâce à Théo, j'ai perdu 15kg en 6 mois tout en me musclant. Son approche personnalisée a changé ma vie !",
+      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150"
+    },
+    {
+      name: "Thomas D.",
+      text: "Un coach exceptionnel qui sait vous pousser à donner le meilleur. Résultats garantis !",
+      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150"
+    },
+    {
+      name: "Sophie M.",
+      text: "Le suivi nutritionnel couplé aux séances d'entraînement, c'est la combinaison parfaite pour atteindre ses objectifs.",
+      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150"
+    }
+  ];
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -56,15 +76,15 @@ function App() {
         .eq('id', userId)
         .single();
       
-      if (error) {
-        if (error.code === 'PGRST116') {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          return fetchUserProfile(userId);
-        }
-        throw error;
-      }
-
+      if (error) throw error;
       setUserProfile(data);
+      
+      // Rediriger vers le dashboard approprié après la connexion
+      if (data.role === 'admin') {
+        setCurrentView('dashboard');
+      } else if (data.role === 'client') {
+        setCurrentView('dashboard');
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setUser(null);
@@ -79,6 +99,7 @@ function App() {
     try {
       setIsLoggingOut(true);
       await supabase.auth.signOut();
+      setCurrentView('home');
       window.location.reload();
     } catch (error) {
       console.error('Error during sign out:', error);
@@ -100,40 +121,39 @@ function App() {
     }
   };
 
-  const testimonials = [
-    {
-      name: "Marie L.",
-      text: "Grâce à Théo, j'ai perdu 15kg en 6 mois tout en me musclant. Son approche personnalisée a changé ma vie !",
-      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150"
-    },
-    {
-      name: "Thomas D.",
-      text: "Un coach exceptionnel qui sait vous pousser à donner le meilleur. Résultats garantis !",
-      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150"
-    },
-    {
-      name: "Sophie M.",
-      text: "Le suivi nutritionnel couplé aux séances d'entraînement, c'est la combinaison parfaite pour atteindre ses objectifs.",
-      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150"
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-50">
         <div className="container mx-auto px-4 py-4 flex items-center">
           <div className="flex-1 flex justify-center">
-            <img src={logo} alt="Théo Moutet" className="h-[200px] w-[200px] object-contain" />
+            <button
+              onClick={() => setCurrentView('home')}
+              className="cursor-pointer transition-transform hover:scale-105"
+            >
+              <img src={logo} alt="Théo Moutet" className="h-[200px] w-[200px] object-contain" />
+            </button>
           </div>
           <div className="flex items-center space-x-4">
             <ThemeToggle />
             {!user && (
               <button
-                onClick={() => setIsAuthModalOpen(true)}
+                onClick={() => {
+                  setIsAdminLogin(false);
+                  setIsAuthModalOpen(true);
+                }}
                 className="bg-[#40E0D0] text-white px-6 py-2 rounded-full hover:bg-[#3BC9BB] transition"
               >
                 Se connecter
+              </button>
+            )}
+            {user && userProfile && currentView !== 'home' && (
+              <button
+                onClick={handleSignOut}
+                className="bg-red-500 text-white px-6 py-2 rounded-full hover:bg-red-600 transition"
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? 'Déconnexion...' : 'Se déconnecter'}
               </button>
             )}
           </div>
@@ -168,47 +188,6 @@ function App() {
                     alt="Transformation"
                     className="rounded-lg shadow-xl"
                   />
-                </div>
-              </div>
-            </section>
-
-            {/* About Me Section */}
-            <section className="py-16 bg-white dark:bg-gray-800">
-              <div className="container mx-auto px-4">
-                <div className="flex flex-col md:flex-row items-center gap-12">
-                  <div className="md:w-1/2">
-                    <img
-                      src="https://images.unsplash.com/photo-1611672585731-fa10603fb9e0?auto=format&fit=crop&q=80&w=600&h=800"
-                      alt="Théo Moutet Coach Sportif"
-                      className="rounded-lg shadow-2xl"
-                    />
-                  </div>
-                  <div className="md:w-1/2 space-y-6">
-                    <h2 className="text-4xl font-bold text-gray-800 dark:text-white">
-                      Qui suis-je ?
-                    </h2>
-                    <div className="space-y-4 text-gray-600 dark:text-gray-300">
-                      <p>
-                        Je suis Théo Moutet, coach sportif passionné et spécialiste en transformation physique. Avec plus de 5 ans d'expérience dans le domaine du fitness et de la nutrition, j'ai aidé des centaines de personnes à atteindre leurs objectifs.
-                      </p>
-                      <p>
-                        Ma philosophie est simple : des résultats durables s'obtiennent par une approche équilibrée, combinant entraînement intelligent et nutrition adaptée. Je crois en la puissance des changements progressifs et en l'importance d'un accompagnement personnalisé.
-                      </p>
-                      <p>
-                        Diplômé en coaching sportif et en nutrition, je continue constamment à me former pour vous offrir les meilleures stratégies et conseils basés sur les dernières recherches scientifiques.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 pt-4">
-                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
-                        <div className="text-[#40E0D0] font-bold text-3xl">500+</div>
-                        <div className="text-gray-600 dark:text-gray-300">Clients satisfaits</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
-                        <div className="text-[#40E0D0] font-bold text-3xl">5+</div>
-                        <div className="text-gray-600 dark:text-gray-300">Années d'expérience</div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </section>
@@ -251,140 +230,40 @@ function App() {
               </div>
             </section>
 
-            {/* Free Ebook Section */}
-            <section className="py-16 bg-gradient-to-br from-[#40E0D0]/5 via-white dark:via-gray-900 to-[#40E0D0]/5">
+            {/* About Me Section */}
+            <section className="py-16 bg-white dark:bg-gray-800">
               <div className="container mx-auto px-4">
                 <div className="flex flex-col md:flex-row items-center gap-12">
                   <div className="md:w-1/2">
                     <img
-                      src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=600&h=400"
-                      alt="Guide nutritionnel gratuit"
-                      className="rounded-lg shadow-2xl transform -rotate-2 hover:rotate-0 transition-transform duration-300"
+                      src={aboutImage}
+                      alt="Théo Moutet Coach Sportif"
+                      className="rounded-lg shadow-2xl"
                     />
                   </div>
                   <div className="md:w-1/2 space-y-6">
-                    <div className="inline-block bg-[#40E0D0]/10 dark:bg-[#40E0D0]/20 px-4 py-2 rounded-full">
-                      <span className="text-[#40E0D0] font-semibold">Guide Gratuit</span>
-                    </div>
                     <h2 className="text-4xl font-bold text-gray-800 dark:text-white">
-                      Découvrez mon guide gratuit sur la nutrition et la prise de masse
+                      Qui suis-je ?
                     </h2>
-                    <p className="text-lg text-gray-600 dark:text-gray-300">
-                      Commencez votre transformation dès aujourd'hui avec mon guide gratuit qui vous révèle les bases essentielles pour une prise de masse musculaire naturelle.
-                    </p>
-                    <ul className="space-y-4">
-                      <li className="flex items-center text-gray-600 dark:text-gray-300">
-                        <ChevronRight className="w-5 h-5 text-[#40E0D0] mr-2" />
-                        Les fondamentaux de la nutrition
-                      </li>
-                      <li className="flex items-center text-gray-600 dark:text-gray-300">
-                        <ChevronRight className="w-5 h-5 text-[#40E0D0] mr-2" />
-                        Les erreurs à éviter
-                      </li>
-                      <li className="flex items-center text-gray-600 dark:text-gray-300">
-                        <ChevronRight className="w-5 h-5 text-[#40E0D0] mr-2" />
-                        3 recettes protéinées
-                      </li>
-                      <li className="flex items-center text-gray-600 dark:text-gray-300">
-                        <ChevronRight className="w-5 h-5 text-[#40E0D0] mr-2" />
-                        Programme débutant offert
-                      </li>
-                    </ul>
-                    <div className="pt-4">
-                      <a
-                        href="#"
-                        className="inline-flex items-center bg-[#40E0D0] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#3BC9BB] transition"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setIsAuthModalOpen(true);
-                        }}
-                      >
-                        <Download className="w-5 h-5 mr-2" />
-                        Télécharger gratuitement
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Ebook Section */}
-            <section className="py-16 bg-gradient-to-r from-[#40E0D0]/10 to-[#40E0D0]/5">
-              <div className="container mx-auto px-4">
-                <div className="flex flex-col md:flex-row items-center gap-12">
-                  <div className="md:w-1/2">
-                    <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl transform rotate-2 hover:rotate-0 transition-transform duration-300">
-                      <img
-                        src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=600&h=400"
-                        alt="Ebook Nutrition et Musculation"
-                        className="rounded-lg mb-6"
-                      />
-                      <Book className="w-12 h-12 text-[#40E0D0] mb-4" />
-                      <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-4">
-                        Guide Complet : Nutrition et Prise de Masse
-                      </h2>
-                      <div className="space-y-4 mb-6">
-                        <p className="text-gray-600 dark:text-gray-300">
-                          Découvrez tous mes secrets pour une prise de masse naturelle et efficace :
-                        </p>
-                        <ul className="space-y-2">
-                          <li className="flex items-center text-gray-600 dark:text-gray-300">
-                            <ChevronRight className="w-5 h-5 text-[#40E0D0] mr-2" />
-                            Plans nutritionnels détaillés
-                          </li>
-                          <li className="flex items-center text-gray-600 dark:text-gray-300">
-                            <ChevronRight className="w-5 h-5 text-[#40E0D0] mr-2" />
-                            Calcul des macronutriments
-                          </li>
-                          <li className="flex items-center text-gray-600 dark:text-gray-300">
-                            <ChevronRight className="w-5 h-5 text-[#40E0D0] mr-2" />
-                            Timing des repas optimal
-                          </li>
-                          <li className="flex items-center text-gray-600 dark:text-gray-300">
-                            <ChevronRight className="w-5 h-5 text-[#40E0D0] mr-2" />
-                            Supplémentation naturelle
-                          </li>
-                        </ul>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-2xl font-bold text-[#40E0D0]">29,99 €</div>
-                        <a
-                          href="https://buy.stripe.com/test_XXXXXXX"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-[#40E0D0] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#3BC9BB] transition flex items-center"
-                        >
-                          <ShoppingCart className="w-5 h-5 mr-2" />
-                          Acheter maintenant
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="md:w-1/2">
-                    <h3 className="text-4xl font-bold text-gray-800 dark:text-white mb-6">
-                      Transformez votre physique avec mon guide expert
-                    </h3>
-                    <div className="space-y-6">
-                      <p className="text-lg text-gray-600 dark:text-gray-300">
-                        Plus de 150 pages de contenu exclusif pour comprendre et maîtriser les principes d'une prise de masse réussie.
+                    <div className="space-y-4 text-gray-600 dark:text-gray-300">
+                      <p>
+                        Je suis Théo Moutet, coach sportif passionné et spécialiste en transformation physique. Avec plus de 5 ans d'expérience dans le domaine du fitness et de la nutrition, j'ai aidé des centaines de personnes à atteindre leurs objectifs.
                       </p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-                          <div className="text-[#40E0D0] font-bold text-2xl mb-1">150+</div>
-                          <div className="text-gray-600 dark:text-gray-300">Pages de contenu</div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-                          <div className="text-[#40E0D0] font-bold text-2xl mb-1">50+</div>
-                          <div className="text-gray-600 dark:text-gray-300">Recettes healthy</div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-                          <div className="text-[#40E0D0] font-bold text-2xl mb-1">12</div>
-                          <div className="text-gray-600 dark:text-gray-300">Programmes types</div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-                          <div className="text-[#40E0D0] font-bold text-2xl mb-1">24/7</div>
-                          <div className="text-gray-600 dark:text-gray-300">Support email</div>
-                        </div>
+                      <p>
+                        Ma philosophie est simple : des résultats durables s'obtiennent par une approche équilibrée, combinant entraînement intelligent et nutrition adaptée. Je crois en la puissance des changements progressifs et en l'importance d'un accompagnement personnalisé.
+                      </p>
+                      <p>
+                        Diplômé en coaching sportif et en nutrition, je continue constamment à me former pour vous offrir les meilleures stratégies et conseils basés sur les dernières recherches scientifiques.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-4">
+                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                        <div className="text-[#40E0D0] font-bold text-3xl">500+</div>
+                        <div className="text-gray-600 dark:text-gray-300">Clients satisfaits</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-center">
+                        <div className="text-[#40E0D0] font-bold text-3xl">5+</div>
+                        <div className="text-gray-600 dark:text-gray-300">Années d'expérience</div>
                       </div>
                     </div>
                   </div>
@@ -443,6 +322,26 @@ function App() {
                 </a>
               </div>
             </section>
+
+            {/* Footer */}
+            <footer className="bg-gray-100 dark:bg-gray-800 py-8">
+              <div className="container mx-auto px-4">
+                <div className="flex flex-col items-center justify-center">
+                  <button
+                    onClick={() => {
+                      setIsAdminLogin(true);
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-[#40E0D0] dark:hover:text-[#40E0D0] transition"
+                  >
+                    Administration
+                  </button>
+                  <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                    © {new Date().getFullYear()} Théo Moutet. Tous droits réservés.
+                  </p>
+                </div>
+              </div>
+            </footer>
           </>
         ) : (
           renderContent()
@@ -451,7 +350,11 @@ function App() {
 
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setIsAdminLogin(false);
+        }}
+        isAdminLogin={isAdminLogin}
       />
     </div>
   );
